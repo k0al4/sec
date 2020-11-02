@@ -25,6 +25,6 @@ output will consist of a bigger csv file with the filing type you need, but only
 you supplied to this function. This file can be used in many other applications, however. You need to supply
 the arguments as well.
 
-To check which information you need to give each function, type: <function>??
+To check which information you need to give each function, type: "function"??
 
 If you have any questions, contact ufudenis@gmail.com
