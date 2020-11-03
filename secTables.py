@@ -111,7 +111,7 @@ def write_edgarIndex(sourceFolder,destFolder,cikList=None,filingType=['10-K'],fi
                 print(str(type(ex).__name__),str(ex.args))
 
 
-def get_metaData(sourceFile,destFolder):
+def get_metaData(sourceFile,destFolder,tupleList=None):
     from bs4 import BeautifulSoup as bs
     from tqdm import tqdm
     import pandas as pd
@@ -140,26 +140,37 @@ def get_metaData(sourceFile,destFolder):
         session.mount('http://', adapter)
         session.mount('https://', adapter)
         return session
-    '''sourceFile is the full path to the
-    file created and stored previously with the write_edgarIndex function. The data consists of a CSV 
-    file and contains: CIK number, current firm name, filing date, filing type, SIC code and label, 
-    IRS number, State of incorporation, State of location, business address, mailing address, 
+    '''sourceFile is the full path to the file created and stored previously with the write_edgarIndex function. 
+    In the case you want to use only the filings from specific dates for each CIK, enter the argument tupleList as a
+    list of tuples like [(CIK,DATE)]. Otherwise, all filings will be included.
+    The data consists of a CSV file and contains: CIK number, current firm name, filing date, filing type, SIC code 
+    and label, IRS number, State of incorporation, State of location, business address, mailing address, 
     a list with former names (if any) and the url to the index of the respective index page.'''
+    def fix_cik(source,column):
+        return ['0' * (10 - len(str(i))) + str(i) for i in source[column]]
     gc.collect()
-    securl = 'https://www.sec.gov/Archives/'
     metadata = pd.DataFrame(columns=['cik','currName','fDate','fType','irsNum','sicDesc','sic','sInc','sLoc',
         'bAddress','mAddress','fUrl'])
     metadata.to_csv(destFolder+'/SEC_datafile.csv',index=False)
-    for chunk in pd.read_csv(sourceFile,chunksize=10000,dtype=str,parse_dates=['report_date']):
+    print('start')
+    for chunk in pd.read_csv(sourceFile,chunksize=10000,dtype={'cik':str},parse_dates=['report_date']):
+        if fix_cik(chunk,'cik') is not None:
+            chunk.cik = fix_cik(chunk,'cik')
+        if tupleList is not None:
+            # chunk = chunk.query("cik in [x[0] for x in @tupleList] and report_date.date().year in [y[1] for y in @tupleList]").reset_index(
+            #     drop=True).copy(deep=True) # There's some bug here.
+            ciks,years = list(set([x[0] for x in tupleList])),list(set([y[1] for y in tupleList]))
+            chunk = chunk.query("cik in @ciks and report_year in @years")
         os.system('cls' if os.name == 'nt' else 'clear')
         with open(destFolder+'/SEC_datafile.csv','a') as csvFile:
             writer = csv.writer(csvFile, delimiter = ',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            print(f'Writer ok.',len(chunk))
             with tqdm(total=len(chunk)) as bar1:
                 for row,col in chunk.iterrows():
                     try:
                         indexurl = 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+str(
                             col['cik'])+'&owner=exclude'
-                        _10kUrl = securl + col['file_url_html']
+                        _10kUrl = col['file_url_html']
                         soup1 = bs(requests_retry_session().get(indexurl).content,'lxml')
                         soup2 = bs(requests_retry_session().get(_10kUrl).content,'lxml')
                         identText1 = soup1.find('p',{'class':'identInfo'}).text
