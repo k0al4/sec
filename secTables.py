@@ -40,6 +40,9 @@ To check which information you need to give each function, type: "function"??
 If you have any questions, contact ufudenis@gmail.com
 '''
 
+def fix_cik(source,column):
+    return ['0' * (10 - len(str(i))) + str(i) for i in source[column]]
+
 def get_indices(**kwargs):
     '''Where 'year' is the starting year to download Edgar's indices.
     Arguments: destFolder,startYear'''
@@ -48,7 +51,7 @@ def get_indices(**kwargs):
     print(f"Indices have been downloaded. Build the dataframe using write_edgarIndex({destFolder}) as parameter.")
 
 def write_edgarIndex(**kwargs):
-    '''Arguments: sourceFolder,destFolder,filingType,fileType,filingYear'''
+    '''Arguments: sourceFolder,destFolder,filingType,filingYear'''
     import glob,re
     from tqdm import tqdm
     import pandas as pd
@@ -72,7 +75,7 @@ def write_edgarIndex(**kwargs):
                 else:
                     print('Failed to convert CIK.',file_sec)
                     break
-                x.to_csv(destFolder+'/'+fileType+'.csv',mode='a',header=header,index=False)
+                x.to_csv(destFolder+'/'+filingType+'.csv',mode='a',header=header,index=False)
                 header = False
             except Exception as ex:
                 print('Can\'t read this file: ' + str(file_sec))
