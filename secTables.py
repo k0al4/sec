@@ -85,11 +85,11 @@ def write_edgarIndex(sourceFolder,destFolder,filingType,filingYear):
             bar1.update()
 
 
-def get_metaData(sourceFile):
+def get_metaData(sourceFile,destFolder):
     from bs4 import BeautifulSoup as bs
     from tqdm import tqdm
     import pandas as pd
-    import re,gc
+    import re,gc,csv,os,unicodedata
     # Next function adapted from https://www.programcreek.com/python/example/18310/requests.Session
     def requests_retry_session(
         retries=5,
@@ -121,32 +121,38 @@ def get_metaData(sourceFile):
     a list with former names (if any) and the url to the index of the respective index page.'''
     gc.collect()
     securl = 'https://www.sec.gov/Archives/'
-    metadata = pd.DataFrame(columns=['cik','currName','fDate','fType','sic','sicDesc','irnNum','sInc','sLoc',
+    metadata = pd.DataFrame(columns=['cik','currName','fDate','fType','irsNum','sicDesc','sic','sInc','sLoc',
         'bAddress','mAddress','fUrl'])
+    metadata.to_csv(destFolder+'/SEC_datafile.csv',index=False)
     for chunk in pd.read_csv(sourceFile,chunksize=10000,dtype=str,parse_dates=['report_date']):
         os.system('cls' if os.name == 'nt' else 'clear')
-        with tqdm(total=len(chunk[:10])) as bar1:
-            for row,col in chunk[:10].iterrows():
-                indexurl = 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+str(
-                    col['cik'])+'&owner=exclude'
-                _10kUrl = securl + col['file_url_html']
-                soup1 = bs(requests_retry_session().get(indexurl).content,'lxml')
-                soup2 = bs(requests_retry_session().get(_10kUrl).content,'lxml')
-                identText1 = soup1.find('p',{'class':'identInfo'}).text
-                identText2 = soup2.find('p',{'class':'identInfo'}).text
-                metadata.loc[len(metadata)] = [
-                col['cik'],col['firm_name'],col['report_date'],col['file_type'],
-                re.search(r'[0-9]{4}',identText1).group(),
-                re.search(r'(?<= \- ).+?(?=State location)',identText1).group(),
-                re.search(r'(?<=IRS No.: )[0-9]+',identText2).group(),
-                re.search(r'(?<=State of Inc.: )[A-Z0-9]{2}',identText1).group(),
-                re.search(r'(?<=State location: )[A-Z0-9]{2}',identText1).group(),
-                [address.strip().replace('Business Address ','') for address in [re.sub(r' {2,999}',' ',tt.replace('\n',' ')) for tt in [unicodedata.normalize('NFKD',t.text) for t in soup1.findAll('div',{'class':'mailer'})]] if 'usiness' in address][0],
-                [address.strip().replace('Mailing Address ','') for address in [re.sub(r' {2,999}',' ',tt.replace('\n',' ')) for tt in [unicodedata.normalize('NFKD',t.text) for t in soup1.findAll('div',{'class':'mailer'})]] if 'ailing' in address][0],
-                col['file_url_html']
-                ]
-                bar1.update(1)
-    return metadata
+        with open(destFolder+'/SEC_datafile.csv','a') as csvFile:
+            writer = csv.writer(csvFile, delimiter = ',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            with tqdm(total=len(chunk)) as bar1:
+                for row,col in chunk.iterrows():
+                    try:
+                        indexurl = 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+str(
+                            col['cik'])+'&owner=exclude'
+                        _10kUrl = securl + col['file_url_html']
+                        soup1 = bs(requests_retry_session().get(indexurl).content,'lxml')
+                        soup2 = bs(requests_retry_session().get(_10kUrl).content,'lxml')
+                        identText1 = soup1.find('p',{'class':'identInfo'}).text
+                        identText2 = soup2.find('p',{'class':'identInfo'}).text
+                        thisRow = [
+                        col['cik'],col['firm_name'],col['report_date'].date(),col['file_type'],
+                        re.search(r'[0-9]{4}',identText1).group(),
+                        re.search(r'(?<= \- ).+?(?=State location)',identText1).group(),
+                        re.search(r'(?<=IRS No.: )[0-9]+',identText2).group(),
+                        re.search(r'(?<=State of Inc.: )[A-Z0-9]{2}',identText1).group(),
+                        re.search(r'(?<=State location: )[A-Z0-9]{2}',identText1).group(),
+                        [address.strip().replace('Business Address ','') for address in [re.sub(r' {2,999}',' ',tt.replace('\n',' ')) for tt in [unicodedata.normalize('NFKD',t.text) for t in soup1.findAll('div',{'class':'mailer'})]] if 'usiness' in address][0],
+                        [address.strip().replace('Mailing Address ','') for address in [re.sub(r' {2,999}',' ',tt.replace('\n',' ')) for tt in [unicodedata.normalize('NFKD',t.text) for t in soup1.findAll('div',{'class':'mailer'})]] if 'ailing' in address][0],
+                        'https://sec.gov/Archives/'+col['file_url_html']
+                        ]
+                    except:
+                        thisRow = [col['cik'],col['firm_name'],col['report_date'].date(),col['file_type'],'','','','','','','','http://sec.gov/Archives/'+col['file_url_html']]
+                    writer.writerow(thisRow)
+                    bar1.update(1)
 
 def get_xbrl_10k():
     '''To be implemented.'''
