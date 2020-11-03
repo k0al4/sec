@@ -54,39 +54,61 @@ def get_indices(destFolder,startYear):
     edgar.download_index(destFolder,startYear)
     print(f"Indices have been downloaded. Build the dataframe using write_edgarIndex({destFolder}) as parameter.")
 
-def write_edgarIndex(sourceFolder,destFolder,filingType,filingYear):
-    '''Arguments: sourceFolder,destFolder,filingType,filingYear'''
-    import glob,re,os
+def write_edgarIndex(sourceFolder,destFolder,cikList=None,filingType=['10-K'],filingYear=[2000,2001]):
+    '''Arguments: sourceFolder,destFolder,filingType,filingYear.
+    Leave filingType blank for 10-K and filingYear blank for [2000,2001]. If not blank, filingYear must be a list of integers.
+    In the case this list of years has length of one, it will use the range of years between the single year in the list
+    and the current year.
+    cikList must be a list. Leave it blank for all CIKs, which is not recommended if filingYear is 2000.
+    There will be a lot of observations.'''
+    import glob,re,os,datetime
     from tqdm import tqdm
     import pandas as pd
     '''Where sourceFolder is the folder where the .tsv files (from SEC Edgar) are located.
     fileName should not have any extensions and will be a CSV file in desfFolder.'''
-    list_files = [f for f in glob.glob(sourceFolder+'/*.tsv') if re.search(r'[0-9]{4}',str(f)).group() >= str(filingYear)]
+    if len(filingYear) == 1:
+        filingYear = [x for x in range(filingYear[0],datetime.datetime.today().date().year + 1)]
+    list_files = [f for f in glob.glob(sourceFolder+'/*.tsv') if any(str(yr) in f for yr in filingYear)]
     def fix_cik(source,column):
         return ['0' * (10 - len(str(i))) + str(i) for i in source[column]]
     header = True
-    os.system('cls' if os.name == 'nt' else 'clear')
+    #os.system('cls' if os.name == 'nt' else 'clear')
+    print(f'Saving file to {destFolder}. File type is {filingType}.')
     with tqdm(total=len(list_files)) as bar1:
         for file_sec in list_files:
+            os.system('cls' if os.name == 'nt' else 'clear')
+            print(f'Reading {file_sec}.')
+            bar1.update()
             try:
                 x = pd.read_csv(file_sec, sep='|',header=None,dtype=str)
                 x.columns = ['cik', 'firm_name','file_type','report_date','file_url_txt','file_url_html']
                 x['report_date'] = pd.to_datetime(x.report_date,errors='coerce')
                 x['report_year'] = [dt.date().year for dt in x.report_date]
-                x = x.query("file_type == @filingType and report_year == @filingYear").copy(deep=True)
                 if fix_cik(x,'cik') is not None:
                     x.cik = fix_cik(x,'cik')
                 else:
                     print('Failed to convert CIK.',file_sec)
                     break
+                if cikList is None:
+                    x = x.query("file_type in @filingType and report_year in @filingYear").copy(deep=True)
+                elif isinstance(cikList,list):
+                    x = x.query("file_type in @filingType and report_year in @filingYear and cik in @cikList").copy(deep=True)
+                else:
+                    print(f'Your cikList {cikList} is not valid.')
+                    break
+                if len(x) == 0:
+                    bar1.update(1)
+                    continue
                 for col in ['file_url_txt','file_url_html']:
-                    x[col] = ['https://sec.gov/Archives/'+u for u in x[col]]
-                x.to_csv(destFolder+'/'+filingType+'_index.csv',mode='a',header=header,index=False)
+                    try:
+                        x[col] = ['https://sec.gov/Archives/' + str(u) for u in x[col]]
+                    except Exception as ex:
+                        print(str(type(ex).__name__),str(ex.args))
+                x.to_csv(destFolder+'/'+','.join(filingType)+'_index.csv',mode='a',header=header,index=False)
                 header = False
             except Exception as ex:
                 print('Can\'t read this file: ' + str(file_sec))
                 print(str(type(ex).__name__),str(ex.args))
-            bar1.update()
 
 
 def get_metaData(sourceFile,destFolder):
