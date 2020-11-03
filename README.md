@@ -8,6 +8,10 @@ generally named "filings" and they are several. The most common among them are t
 DEF 14A and they are filed when some specific event happens and the company has to make that information 
 available. For instance, the 10-Ks bring audited financial statement and are disclosed one every year.
 
+Many times, researchers like myself don't have access to most of the mainstream paid databases. However,
+much of the data they sell comes from the SEC Edgar system and there is no reason why we couldn't do the
+same.
+
 This script is part of my initiative to get all data I need for my research from "free" sources, that is,
 where we do not need to pay a subscription to get access. It uses the modules edgar, requests and 
 beautifulsoup to access, connect and parse the pages. The requests are done in a way that it is very 
