@@ -55,8 +55,8 @@ def get_indices(destFolder,startYear):
     print(f"Indices have been downloaded. Build the dataframe using write_edgarIndex({destFolder}) as parameter.")
 
 def write_edgarIndex(sourceFolder,destFolder,cikList=None,filingType=['10-K'],filingYear=[2000,2001]):
-    '''Arguments: sourceFolder,destFolder,filingType,filingYear.
-    Leave filingType blank for 10-K and filingYear blank for [2000,2001]. If not blank, filingYear must be a list of integers.
+    '''Optional arguments: filingType,filingYear.
+    Leave filingType blank will get 10-K filings and filingYear blank gets [2000,2001]. If not blank, filingYear must be a list of integers.
     In the case this list of years has length of one, it will use the range of years between the single year in the list
     and the current year.
     cikList must be a list. Leave it blank for all CIKs, which is not recommended if filingYear is 2000.
@@ -112,6 +112,12 @@ def write_edgarIndex(sourceFolder,destFolder,cikList=None,filingType=['10-K'],fi
 
 
 def get_metaData(sourceFile,destFolder,tupleList=None):
+    '''sourceFile is the full path to the file created and stored previously with the write_edgarIndex function. 
+    In the case you want to use only the filings from specific dates for each CIK, enter the argument tupleList as a
+    list of tuples like [(CIK,DATE)]. Otherwise, all filings will be included.
+    The data consists of a CSV file and contains: CIK number, current firm name, filing date, filing type, SIC code 
+    and label, IRS number, State of incorporation, State of location, business address, mailing address, 
+    a list with former names (if any) and the url to the index of the respective index page.'''
     from bs4 import BeautifulSoup as bs
     from tqdm import tqdm
     import pandas as pd
@@ -140,12 +146,6 @@ def get_metaData(sourceFile,destFolder,tupleList=None):
         session.mount('http://', adapter)
         session.mount('https://', adapter)
         return session
-    '''sourceFile is the full path to the file created and stored previously with the write_edgarIndex function. 
-    In the case you want to use only the filings from specific dates for each CIK, enter the argument tupleList as a
-    list of tuples like [(CIK,DATE)]. Otherwise, all filings will be included.
-    The data consists of a CSV file and contains: CIK number, current firm name, filing date, filing type, SIC code 
-    and label, IRS number, State of incorporation, State of location, business address, mailing address, 
-    a list with former names (if any) and the url to the index of the respective index page.'''
     def fix_cik(source,column):
         return ['0' * (10 - len(str(i))) + str(i) for i in source[column]]
     gc.collect()
