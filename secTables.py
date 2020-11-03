@@ -54,7 +54,7 @@ def write_edgarIndex(**kwargs):
     import pandas as pd
     '''Where sourceFolder is the folder where the .tsv files (from SEC Edgar) are located.
     fileName should not have any extensions and will be a CSV file in desfFolder.'''
-    list_files = [f for f in glob.glob('/Volumes/jazz/SEC_Edgar/*.tsv') if re.search(r'[0-9]{4}',str(f)).group() >= str(filingYear)]
+    list_files = [f for f in glob.glob(sourceFolder+'/*.tsv') if re.search(r'[0-9]{4}',str(f)).group() >= str(filingYear)]
     def fix_cik(source,column):
         return ['0' * (10 - len(str(i))) + str(i) for i in source[column]]
     header = True
