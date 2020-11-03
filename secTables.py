@@ -43,16 +43,16 @@ If you have any questions, contact ufudenis@gmail.com
 def fix_cik(source,column):
     return ['0' * (10 - len(str(i))) + str(i) for i in source[column]]
 
-def get_indices(**kwargs):
+def get_indices(destFolder,startYear):
     '''Where 'year' is the starting year to download Edgar's indices.
     Arguments: destFolder,startYear'''
     import edgar # https://pypi.org/project/edgar/
     edgar.download_index(destFolder,startYear)
     print(f"Indices have been downloaded. Build the dataframe using write_edgarIndex({destFolder}) as parameter.")
 
-def write_edgarIndex(**kwargs):
+def write_edgarIndex(sourceFolder,destFolder,filingType,filingYear):
     '''Arguments: sourceFolder,destFolder,filingType,filingYear'''
-    import glob,re
+    import glob,re,os
     from tqdm import tqdm
     import pandas as pd
     '''Where sourceFolder is the folder where the .tsv files (from SEC Edgar) are located.
@@ -75,12 +75,15 @@ def write_edgarIndex(**kwargs):
                 else:
                     print('Failed to convert CIK.',file_sec)
                     break
-                x.to_csv(destFolder+'/'+filingType+'.csv',mode='a',header=header,index=False)
+                for col in ['file_url_txt','file_url_html']:
+                    x[col] = ['https://sec.gov/Archives/'+u for u in x[col]]
+                x.to_csv(destFolder+'/'+filingType+'_index.csv',mode='a',header=header,index=False)
                 header = False
             except Exception as ex:
                 print('Can\'t read this file: ' + str(file_sec))
                 print(str(type(ex).__name__),str(ex.args))
             bar1.update()
+
 
 def get_metaData(sourceFile):
     from bs4 import BeautifulSoup as bs
