@@ -172,7 +172,7 @@ def get_metaData(sourceFile,destFolder,tupleList=None):
                         soup1 = bs(requests_retry_session().get(indicesUrl).content,'lxml')
                         soup2 = bs(requests_retry_session().get(indexUrl).content,'lxml')
                         identText1 = soup1.find('p',{'class':'identInfo'}).text
-                        identText2 = [div for div in soup.find_all('div',{'class': lambda x: x and 'companyInfo' in x}) if '0001044082' in div.text][0].text
+                        identText2 = [div for div in soup.find_all('div',{'class': lambda x: x and 'companyInfo' in x}) if str(col['cik']) in div.text][0].text
                         thisRow = [
                         col['cik'],col['firm_name'],col['report_date'].date(),col['file_type'],
                         re.search(r'[0-9]{4}',identText1).group(),
