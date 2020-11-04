@@ -185,7 +185,7 @@ def get_metaData(sourceFile,destFolder,tupleList=None):
                         'https://sec.gov/Archives/'+col['file_url_html']
                         ]
                     except:
-                        thisRow = [col['cik'],col['firm_name'],col['report_date'].date(),col['file_type'],'','','','','','','',+col['file_url_html']]
+                        thisRow = [col['cik'],col['firm_name'],col['report_date'].date(),col['file_type'],'','','','','','','',col['file_url_html']]
                     writer.writerow(thisRow)
                     bar1.update(1)
 
